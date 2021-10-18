@@ -7,7 +7,12 @@ import numpy as np
 
 class Tensor (object):
 
-    def __init__(self, data, autograd = False, creators = None, creation_op = None, id = None):
+    def __init__(self, data,
+                 autograd = False,
+                 creators = None,
+                 creation_op = None,
+                 id = None):
+
         self.data = np.array(data)
         # Хранит операции, использовавшиеся в процессе создания данного тензора
         self.creation_op = creation_op
@@ -18,8 +23,9 @@ class Tensor (object):
         self.autograd = autograd
         self.children = {}
         if (id is None):
-            id = np.random.randint(0, 100000)
-        self.id = id
+            self.id = np.random.randint(0, 100000)
+        else:
+            self.id = id
 
         #скорректирвоать число птомков данного тензора
         if (creators is not None):
@@ -41,22 +47,29 @@ class Tensor (object):
 
         #проверка возможности обратного распространения или ожидания градиента, в последнем случае нужно уменьшить счетчик
         if (self.autograd):
+
             if (grad_origin is not None):
                 if (self.children[grad_origin.id] == 0):
                     raise Exception("cannot backprop more tan once")
                 else:
                     self.children[grad_origin.id] -= 1
-                #Накопление градиентов от нескольких потомков
-                if (self.grad is None):
-                    self.grad = grad
-                else:
-                    self.grad += grad
+            #Накопление градиентов от нескольких потомков
+            if (self.grad is None):
+                self.grad = grad
+            else:
+                self.grad += grad
 
-                if (self.creators is not None and (self.all_children_grads_accounted_for() or grad_origin is None)):
-                    if (self.creation_op == "add"):
-                        # Фактическое начало обратного распространения
-                        self.creators[0].backward(grad, self)
-                        self.creators[1].backward(grad, self)
+            # у градиентов не должно быть собственных градиентов
+            assert grad.autograd == False
+
+            if (self.creators is not None and
+                    (self.all_children_grads_accounted_for() or
+                     grad_origin is None)):
+
+                if (self.creation_op == "add"):
+                    # Фактическое начало обратного распространения
+                    self.creators[0].backward(self.grad, self)
+                    self.creators[1].backward(self.grad, self)
 
     def __add__(self, other):
         if (self.autograd and other.autograd):
