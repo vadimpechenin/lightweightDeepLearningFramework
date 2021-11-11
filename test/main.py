@@ -26,3 +26,6 @@ f = d + e
 
 f.backward(Tensor(np.array([1, 1, 1, 1, 1])))
 print(b.grad.data == np.array([2,2,2,2,2]))
+
+#Test commit
+g=0
