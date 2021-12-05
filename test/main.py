@@ -185,5 +185,31 @@ for i in range(10):
     loss.backward(Tensor(np.ones_like(loss.data)))
     optim.step()
     print(loss)
+
+#8. Реализация сети с кросс-энтропией
+from layers.crossentropyloss import CrossEntropyLoss
+
+# Исходные индексы
+data = Tensor(np.array([1, 2, 1, 2]), autograd=True)
+
+# Целевые индексы
+target = Tensor(np.array([0, 1, 0, 1]), autograd=True)
+
+model = Sequential([Embedding(3, 3), Tanh(), Linear(3, 4)])
+criterion = CrossEntropyLoss()
+
+optim = SGD(parameters=model.get_parameters(), alpha=0.1)
+print('CrossEntropyLoss')
+for i in range(10):
+    # Прогноз
+    pred = model.forward(data)
+
+    # Сравнение
+    loss = criterion.forward(pred, target)
+
+    # Обучение
+    loss.backward(Tensor(np.ones_like(loss.data)))
+    optim.step()
+    print(loss)
 g=0
 
