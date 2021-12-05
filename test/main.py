@@ -3,6 +3,7 @@
 """
 import numpy as np
 
+
 from tensor.tensor import Tensor
 
 x = Tensor([1, 2, 3, 4, 5])
@@ -123,18 +124,22 @@ for i in range(10):
     print(loss)
 
 #4 Как теперь с оптимизатором градиентного спуска и слоями
+print('С нелинейными слоями')
 from layers.sequential import Sequential
 from layers.linear import Linear
+from layers.mseLoss import MSELoss
+from layers.sigmoid import Sigmoid
+from layers.relu import ReLU
+from layers.tanh import Tanh
+
 data = Tensor(np.array([[0, 0], [0, 1], [1, 0], [1, 1]]), autograd=True)
 target = Tensor(np.array([[0], [1], [0], [1]]), autograd=True)
 
 #Архитектура сети
-model = Sequential([Linear(2,3), Linear(3,1)])
-w = list()
-w.append(Tensor(np.random.rand(2, 3), autograd=True))
-w.append(Tensor(np.random.rand(3, 1), autograd=True))
+model = Sequential([Linear(2,3), Tanh(), Linear(3,1), Sigmoid()])
+criterion = MSELoss()
 
-optim = SGD(parameters=model.get_parameters(), alpha=0.05)
+optim = SGD(parameters=model.get_parameters(), alpha=1)
 
 for i in range(10):
 
@@ -142,13 +147,43 @@ for i in range(10):
     pred = model.forward(data)
 
     # Compare
-    loss = ((pred - target) * (pred - target)).sum(0)
+    loss = criterion.forward(pred, target)
 
     # Learn
     loss.backward(Tensor(np.ones_like(loss.data)))
 
     optim.step()
 
+    print(loss)
+
+
+#6. Проверка индексирования
+x1 = Tensor(np.eye(5), autograd=True)
+x1.index_select(Tensor([[1,2,3],[2,3,4]])).backward()
+print(x1.grad)
+
+#7 Реализация со слоем индексирования
+from layers.embedding import Embedding
+
+data = Tensor(np.array([1, 2, 1, 2]), autograd=True)
+target = Tensor(np.array([[0], [1], [0], [1]]), autograd=True)
+
+embed = Embedding(5, 3)
+model = Sequential([embed, Tanh(), Linear(3, 1), Sigmoid()])
+criterion = MSELoss()
+
+optim = SGD(parameters=model.get_parameters(), alpha=0.5)
+print('Embedding')
+for i in range(10):
+    # Predict
+    pred = model.forward(data)
+
+    # Compare
+    loss = criterion.forward(pred, target)
+
+    # Learn
+    loss.backward(Tensor(np.ones_like(loss.data)))
+    optim.step()
     print(loss)
 g=0
 

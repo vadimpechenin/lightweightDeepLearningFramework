@@ -48,11 +48,16 @@ class Tensor (object):
         #проверка возможности обратного распространения или ожидания градиента, в последнем случае нужно уменьшить счетчик
         if (self.autograd):
 
+            if (grad is None):
+                #Позволяет не передавать градиент единиц в первый вызов
+                grad = Tensor(np.ones_like(self.data))
+
             if (grad_origin is not None):
                 if (self.children[grad_origin.id] == 0):
                     raise Exception("cannot backprop more tan once")
                 else:
                     self.children[grad_origin.id] -= 1
+
             #Накопление градиентов от нескольких потомков
             if (self.grad is None):
                 self.grad = grad
@@ -103,6 +108,25 @@ class Tensor (object):
 
                 if (self.creation_op == "neg"):
                     self.creators[0].backward(self.grad.__neg__())
+
+                if (self.creation_op == "sigmoid"):
+                    ones = Tensor(np.ones_like(self.grad.data))
+                    self.creators[0].backward(self.grad * (self * (ones - self)))
+
+                if (self.creation_op == "tanh"):
+                    ones = Tensor(np.ones_like(self.grad.data))
+                    self.creators[0].backward(self.grad * (ones - (self * self)))
+
+                if (self.creation_op == "relu"):
+                    self.creators[0].backward(self.grad * (self.grad.data > 0))
+
+                if (self.creation_op == "index_select"):
+                    new_grad = np.zeros_like(self.creators[0].data)
+                    indices_ = self.index_select_indices.data.flatten()
+                    grad_ = grad.data.reshape(len(indices_), -1)
+                    for i in range(len(indices_)):
+                        new_grad[indices_[i]] += grad_[i]
+                    self.creators[0].backward(Tensor(new_grad))
 
     def __add__(self, other):
         if (self.autograd and other.autograd):
@@ -173,6 +197,45 @@ class Tensor (object):
                           creators=[self, x],
                           creation_op="mm")
         return Tensor(self.data.dot(x.data))
+
+    def sigmoid(self):
+        #Функция активации сигмоидная
+        if (self.autograd):
+            return Tensor(1 / (1 + np.exp(-self.data)),
+                          autograd=True,
+                          creators=[self],
+                          creation_op="sigmoid")
+        return Tensor(1 / (1 + np.exp(-self.data)))
+
+    def tanh(self):
+        if (self.autograd):
+            return Tensor(np.tanh(self.data),
+                          autograd=True,
+                          creators=[self],
+                          creation_op="tanh")
+        return Tensor(np.tanh(self.data))
+
+    def relu(self):
+        # Функция активации ReLU
+        if (self.autograd):
+            return Tensor(self.data * (self.data > 0),
+                          autograd=True,
+                          creators=[self],
+                          creation_op="relu")
+        return Tensor(self.data * (self.data > 0))
+
+    def index_select(self, indices):
+        #Поддержка индексирования,
+        # гарантирующая на этапе обратного распространения размещение градиентов в тех же строках,
+        #
+        if (self.autograd):
+            new = Tensor(self.data[indices.data],
+                         autograd=True,
+                         creators=[self],
+                         creation_op="index_select")
+            new.index_select_indices = indices
+            return new
+        return Tensor(self.data[indices.data])
 
     def __repr__(self):
         return str(self.data.__repr__())
