@@ -55,6 +55,13 @@ class Tensor (object):
             if (grad_origin is not None):
                 if (self.children[grad_origin.id] == 0):
                     raise Exception("cannot backprop more tan once")
+                    return
+                    print(self.id)
+                    print(self.creation_op)
+                    print(len(self.creators))
+                    for c in self.creators:
+                        print(c.creation_op)
+                    raise Exception("cannot backprop more than once")
                 else:
                     self.children[grad_origin.id] -= 1
 

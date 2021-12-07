@@ -4,6 +4,7 @@ import numpy as np
 
 from layers.crossentropyloss import CrossEntropyLoss
 from layers.embedding import Embedding
+from layers.lstmcell import LSTMCell
 from layers.rnncell import RNNCell
 from optimization.sgd import SGD
 from tensor.tensor import Tensor
@@ -94,3 +95,13 @@ for idx in data[0:batch_size][0][0:-1]:
 print("Context:",ctx)
 print("True:",vocab[target.data[0]])
 print("Pred:", vocab[output.data.argmax()])
+
+#Архитектура LSTM
+
+embed1 = Embedding(vocab_size=len(vocab),dim=512)
+model1 = LSTMCell(n_inputs=512, n_hidden=512, n_output=len(vocab))
+#Это немного поможет в обучении
+model1.w_ho.weight.data *= 0
+
+criterion1 = CrossEntropyLoss()
+optim1 = SGD(parameters=model1.get_parameters() + embed1.get_parameters(), alpha=0.05)
